@@ -1,0 +1,33 @@
+name: dukas-ticks
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 */6 * * *'   # auto-resume every 6 h until all months exist
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: dukas-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  download:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    strategy:
+      fail-fast: false
+      max-parallel: 16
+      matrix:
+        year: [2022, 2023, 2024, 2025]
+        months: ['1,2,3', '4,5,6', '7,8,9', '10,11,12']
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install pandas pyarrow numpy
+      - name: download ${{ matrix.year }} months ${{ matrix.months }} (each finished month is pushed to branch data-dukas)
+        run: |
+          git config user.name dukas-bot; git config user.email bot@example.com
+          cp dukas_runner.py /tmp/dukas_runner.py
+          python /tmp/dukas_runner.py ${{ matrix.year }} /tmp/out ${{ matrix.months }}

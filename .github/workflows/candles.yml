@@ -14,7 +14,7 @@ concurrency:
 jobs:
   candles:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 130
     strategy:
       fail-fast: false
       max-parallel: 14

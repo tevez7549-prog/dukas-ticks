@@ -37,25 +37,35 @@ try:
         have=set(zip(pd.to_datetime(old.t,unit='s').dt.year,pd.to_datetime(old.t,unit='s').dt.month))
         ms=[ym for ym in ms if ym not in have]; print(SYM,'resume: months still missing',len(ms),flush=True)
 except Exception as e: print('no existing file',e,flush=True)
-with ThreadPoolExecutor(max_workers=2) as ex: res=list(ex.map(month,ms))
-parts=[d for _,s,d in res if s=='ok']
-if old is not None: parts.append(old)
+def push(D):
+    os.makedirs('/tmp/out',exist_ok=True); fn=f'/tmp/out/{SYM}_H1.parquet'; D.to_parquet(fn,compression='zstd',index=False)
+    for i in range(10):
+        try:
+            subprocess.run('git fetch -q origin data-candles && git checkout -q -B data-candles origin/data-candles || (git checkout -q --orphan data-candles && git rm -rfq . >/dev/null 2>&1 || true)',shell=True,check=True)
+            os.makedirs('candles',exist_ok=True); shutil.copy(fn,'candles/')
+            subprocess.run(f'git add candles && git commit -qm "candles {SYM}" && git push -q origin data-candles',shell=True,check=True)
+            print('pushed',SYM,'rows',len(D),flush=True); return True
+        except subprocess.CalledProcessError as e:
+            print('push retry',i,e,flush=True); time.sleep(10+i*7)
+    return False
+# download in chunks, push after every chunk, stop before the job timeout (partial progress is kept; the hourly cron resumes)
+T0=time.time(); BUDGET=float(os.environ.get('BUDGET_MIN','100'))*60; CH=12
+res=[]; cur=old; new_ok=0
+for k in range(0,len(ms),CH):
+    if time.time()-T0>BUDGET: print(SYM,'time budget reached, months left',len(ms)-k,flush=True); break
+    with ThreadPoolExecutor(max_workers=2) as ex: r=list(ex.map(month,ms[k:k+CH]))
+    res+=r; parts=[d for _,s,d in r if s=='ok']
+    if parts:
+        new_ok+=len(parts)
+        if cur is not None: parts.append(cur)
+        cur=pd.concat(parts).sort_values('t').drop_duplicates('t')
+        cur=cur[cur.v>0]   # Dukascopy writes flat zero-volume hours for closed market
+        push(cur)
 st={}
 for ym,s,_ in res: st[s]=st.get(s,0)+1
 print(SYM,'months',st,flush=True)
-if not parts: print('NO DATA',SYM); sys.exit(0)
 failed=[ym for ym,s_,_ in res if s_=='FAILED']; print(SYM,'FAILED months',failed,flush=True)
-if not [d for _,s_,d in res if s_=='ok']: print('nothing new'); sys.exit(0)
-D=pd.concat(parts).sort_values('t').drop_duplicates('t')
-D=D[D.v>0]   # Dukascopy writes flat zero-volume hours for closed market
-bad=(D.h<np.maximum(D.o,D.c))|(D.l>np.minimum(D.o,D.c))
+if cur is None: print('NO DATA',SYM); sys.exit(0)
+if not new_ok: print('nothing new'); sys.exit(0)
+D=cur; bad=(D.h<np.maximum(D.o,D.c))|(D.l>np.minimum(D.o,D.c))
 print(SYM,'rows',len(D),'first',pd.to_datetime(D.t.iloc[0],unit='s'),'last',pd.to_datetime(D.t.iloc[-1],unit='s'),'bad OHLC',int(bad.sum()),'median raw close',int(D.c.median()),'median raw spread',float((D.c_a-D.c).median()),flush=True)
-os.makedirs('/tmp/out',exist_ok=True); fn=f'/tmp/out/{SYM}_H1.parquet'; D.to_parquet(fn,compression='zstd',index=False)
-for i in range(10):
-    try:
-        subprocess.run('git fetch -q origin data-candles && git checkout -q -B data-candles origin/data-candles || (git checkout -q --orphan data-candles && git rm -rfq . >/dev/null 2>&1 || true)',shell=True,check=True)
-        os.makedirs('candles',exist_ok=True); shutil.copy(fn,'candles/')
-        subprocess.run(f'git add candles && git commit -qm "candles {SYM}" && git push -q origin data-candles',shell=True,check=True)
-        print('pushed',SYM,flush=True); break
-    except subprocess.CalledProcessError as e:
-        print('push retry',i,e,flush=True); time.sleep(10+i*7)

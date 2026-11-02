@@ -1,6 +1,8 @@
 name: dukas-candles
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '41 * * * *'   # resume hourly until no month is missing
   push:
     branches: [main]
     paths: [candles_runner.py, .github/workflows/candles.yml]

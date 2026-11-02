@@ -4,15 +4,15 @@ import urllib.request, lzma, os, sys, time, subprocess, shutil
 import numpy as np, pandas as pd
 from concurrent.futures import ThreadPoolExecutor
 SYM=sys.argv[1]; Y0=int(sys.argv[2]) if len(sys.argv)>2 else 2003; Y1=2026
-def fetch(url,tries=6):
+def fetch(url,tries=10):
     for k in range(tries):
         try:
             req=urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0'})
             with urllib.request.urlopen(req,timeout=60) as r: return r.read()
         except urllib.error.HTTPError as e:
             if e.code==404: return b''
-            time.sleep(3+5*k)
-        except Exception: time.sleep(3+5*k)
+            time.sleep(5+10*k)
+        except Exception: time.sleep(5+10*k)
     return None
 DT=np.dtype([('t','>u4'),('o','>u4'),('c','>u4'),('l','>u4'),('h','>u4'),('v','>f4')])
 def month(ym):
@@ -28,11 +28,24 @@ def month(ym):
     d=b.merge(a,on='t',suffixes=('','_a'))
     return ym,'ok',d
 ms=[(y,m) for y in range(Y0,Y1+1) for m in range(1,13) if (y,m)<=(2026,10)]
-with ThreadPoolExecutor(max_workers=4) as ex: res=list(ex.map(month,ms))
-parts=[d for _,s,d in res if s=='ok']; st={}
+old=None
+try:
+    subprocess.run('git fetch -q origin data-candles',shell=True,check=True)
+    raw=subprocess.run(f'git show origin/data-candles:candles/{SYM}_H1.parquet',shell=True,capture_output=True).stdout
+    if raw:
+        import io; old=pd.read_parquet(io.BytesIO(raw))
+        have=set(zip(pd.to_datetime(old.t,unit='s').dt.year,pd.to_datetime(old.t,unit='s').dt.month))
+        ms=[ym for ym in ms if ym not in have]; print(SYM,'resume: months still missing',len(ms),flush=True)
+except Exception as e: print('no existing file',e,flush=True)
+with ThreadPoolExecutor(max_workers=2) as ex: res=list(ex.map(month,ms))
+parts=[d for _,s,d in res if s=='ok']
+if old is not None: parts.append(old)
+st={}
 for ym,s,_ in res: st[s]=st.get(s,0)+1
 print(SYM,'months',st,flush=True)
 if not parts: print('NO DATA',SYM); sys.exit(0)
+failed=[ym for ym,s_,_ in res if s_=='FAILED']; print(SYM,'FAILED months',failed,flush=True)
+if not [d for _,s_,d in res if s_=='ok']: print('nothing new'); sys.exit(0)
 D=pd.concat(parts).sort_values('t').drop_duplicates('t')
 D=D[D.v>0]   # Dukascopy writes flat zero-volume hours for closed market
 bad=(D.h<np.maximum(D.o,D.c))|(D.l>np.minimum(D.o,D.c))

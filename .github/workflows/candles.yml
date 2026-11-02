@@ -8,6 +8,9 @@ on:
     paths: [candles_runner.py, .github/workflows/candles.yml]
 permissions:
   contents: write
+concurrency:
+  group: candles
+  cancel-in-progress: false
 jobs:
   candles:
     runs-on: ubuntu-latest

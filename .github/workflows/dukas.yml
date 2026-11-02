@@ -2,8 +2,7 @@ name: dukas-ticks
 on:
   push:
     branches: [main]
-  schedule:
-    - cron: '17 */6 * * *'   # auto-resume every 6 h until all months exist
+  # schedule removed 2026-11-02: all 48 months (2022-2025) exist; re-run via workflow_dispatch
   workflow_dispatch:
 permissions:
   contents: write

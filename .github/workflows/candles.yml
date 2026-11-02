@@ -1,0 +1,32 @@
+name: dukas-candles
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [candles_runner.py, .github/workflows/candles.yml]
+permissions:
+  contents: write
+jobs:
+  candles:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      max-parallel: 12
+      matrix:
+        sym: [EURUSD, GBPUSD, USDJPY, USDCHF, USDCAD, AUDUSD, NZDUSD, EURGBP, EURJPY, EURCHF, EURAUD, EURCAD, EURNZD,
+              GBPJPY, GBPCHF, GBPAUD, GBPCAD, GBPNZD, AUDJPY, AUDCHF, AUDCAD, AUDNZD, NZDJPY, NZDCHF, NZDCAD, CADJPY, CADCHF, CHFJPY,
+              XAUUSD, XAGUSD, LIGHTCMDUSD, BRENTCMDUSD, GASCMDUSD,
+              USA30IDXUSD, USA500IDXUSD, USATECHIDXUSD, DEUIDXEUR, GBRIDXGBP, FRAIDXEUR, JPNIDXJPY, AUSIDXAUD, HKGIDXHKD, EUSIDXEUR,
+              BTCUSD, ETHUSD]
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install pandas pyarrow numpy
+      - name: candles ${{ matrix.sym }}
+        run: |
+          git config user.name dukas-bot; git config user.email bot@example.com
+          cp candles_runner.py /tmp/candles_runner.py
+          python /tmp/candles_runner.py ${{ matrix.sym }} 2003

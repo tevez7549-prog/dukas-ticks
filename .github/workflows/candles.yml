@@ -14,10 +14,10 @@ concurrency:
 jobs:
   candles:
     runs-on: ubuntu-latest
-    timeout-minutes: 130
+    timeout-minutes: 360
     strategy:
       fail-fast: false
-      max-parallel: 14
+      max-parallel: 20
       matrix:
         sym: [EURUSD, GBPUSD, USDJPY, USDCHF, USDCAD, AUDUSD, NZDUSD, EURGBP, EURJPY, EURCHF, EURAUD, EURCAD, EURNZD,
               GBPJPY, GBPCHF, GBPAUD, GBPCAD, GBPNZD, AUDJPY, AUDCHF, AUDCAD, AUDNZD, NZDJPY, NZDCHF, NZDCAD, CADJPY, CADCHF, CHFJPY,

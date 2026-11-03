@@ -49,7 +49,7 @@ def push(D):
             print('push retry',i,e,flush=True); time.sleep(10+i*7)
     return False
 # download in chunks, push after every chunk, stop before the job timeout (partial progress is kept; the hourly cron resumes)
-T0=time.time(); BUDGET=float(os.environ.get('BUDGET_MIN','100'))*60; CH=12
+T0=time.time(); BUDGET=float(os.environ.get('BUDGET_MIN','330'))*60; CH=12
 res=[]; cur=old; new_ok=0
 for k in range(0,len(ms),CH):
     if time.time()-T0>BUDGET: print(SYM,'time budget reached, months left',len(ms)-k,flush=True); break

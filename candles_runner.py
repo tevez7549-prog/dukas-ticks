@@ -23,7 +23,7 @@ def month(ym):
         if not raw: return ym,'none',None
         a=np.frombuffer(lzma.decompress(raw),dtype=DT)
         base=int(pd.Timestamp(y,m,1,tz='UTC').timestamp())
-        out[side]=pd.DataFrame({'t':base+a['t'].astype(np.int64),'o':a['o'],'h':a['h'],'l':a['l'],'c':a['c'],'v':a['v']})
+        out[side]=pd.DataFrame({'t':base+a['t'].astype(np.int64),'o':a['o'].astype(np.uint32),'h':a['h'].astype(np.uint32),'l':a['l'].astype(np.uint32),'c':a['c'].astype(np.uint32),'v':a['v'].astype(np.float32)})  # native endian
     b,a=out['BID'],out['ASK']
     d=b.merge(a,on='t',suffixes=('','_a'))
     return ym,'ok',d

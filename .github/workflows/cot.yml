@@ -1,0 +1,22 @@
+name: cftc-cot
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [cot_runner.py, .github/workflows/cot.yml]
+permissions:
+  contents: write
+jobs:
+  cot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install pandas pyarrow
+      - run: |
+          git config user.name dukas-bot; git config user.email bot@example.com
+          cp cot_runner.py /tmp/cot_runner.py
+          python /tmp/cot_runner.py 2000 2026

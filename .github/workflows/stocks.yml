@@ -1,0 +1,34 @@
+name: dukas-stocks
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [.github/workflows/stocks.yml]
+permissions:
+  contents: write
+concurrency:
+  group: stocks
+  cancel-in-progress: false
+jobs:
+  candles:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      max-parallel: 15
+      matrix:
+        sym: [AAPLUSUSD, MSFTUSUSD, NVDAUSUSD, AMZNUSUSD, GOOGLUSUSD, METAUSUSD, FBUSUSD, TSLAUSUSD, NFLXUSUSD, AMDUSUSD, INTCUSUSD,
+              CSCOUSUSD, ORCLUSUSD, IBMUSUSD, ADBEUSUSD, JPMUSUSD, BACUSUSD, CUSUSD, GSUSUSD, VUSUSD, MAUSUSD,
+              XOMUSUSD, CVXUSUSD, KOUSUSD, PEPUSUSD, PGUSUSD, JNJUSUSD, PFEUSUSD, WMTUSUSD, MCDUSUSD, NKEUSUSD, DISUSUSD, BAUSUSD, BABAUSUSD]
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install pandas pyarrow numpy
+      - name: candles ${{ matrix.sym }}
+        env: { BUDGET_MIN: '100' }
+        run: |
+          git config user.name dukas-bot; git config user.email bot@example.com
+          cp candles_runner.py /tmp/candles_runner.py
+          python /tmp/candles_runner.py ${{ matrix.sym }} 2016

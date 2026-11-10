@@ -1,0 +1,21 @@
+name: fomc-pages
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [.github/workflows/fomc.yml]
+permissions:
+  contents: write
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          mkdir -p /tmp/fomc
+          for y in $(seq 2003 2020); do curl -sL -A "Mozilla/5.0" "https://www.federalreserve.gov/monetarypolicy/fomchistorical$y.htm" -o /tmp/fomc/$y.htm; sleep 2; done
+          ls -la /tmp/fomc
+          git config user.name dukas-bot; git config user.email bot@example.com
+          git checkout -q --orphan data-fomc; git rm -rfq . ; mkdir fomc; cp /tmp/fomc/* fomc/
+          git add fomc && git commit -qm "FOMC historical pages 2003-2020 (public federalreserve.gov, research)" && git push -qf origin data-fomc

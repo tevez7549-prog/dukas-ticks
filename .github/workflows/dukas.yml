@@ -2,8 +2,6 @@ name: dukas-ticks
 on:
   push:
     branches: [main]
-  schedule:
-    - cron: '17 */6 * * *'   # 2026-11-02: resume 2011-2021 download until all months exist (2022-2025 done)
   workflow_dispatch:
 permissions:
   contents: write
@@ -18,8 +16,8 @@ jobs:
       fail-fast: false
       max-parallel: 20
       matrix:
-        year: [2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021]
-        months: ['1,2,3', '4,5,6', '7,8,9', '10,11,12']
+        year: [2026]
+        months: ['1,2', '3,4', '5,6', '7,8', '9,10']
     steps:
       - uses: actions/checkout@v4
         with: { ref: main }
